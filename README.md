@@ -15,6 +15,24 @@
 - ⏱️ **データ間隔の選択**: 日次、週次、月次など、様々な時間足に対応
 - 💾 **CSVダウンロード**: 取得したデータをCSVファイルとして保存・ダウンロード
 - 🇯🇵 **日本語対応**: カラム名を日本語に変換したバージョンも出力可能
+- 📈 **上昇予想銘柄のレコメンド**: 過去の株価推移からテクニカル指標でスコアリングし、上昇期待度が高い銘柄をランキング表示
+
+### レコメンド機能（セクション7）
+
+複数の候補銘柄の過去株価推移を一括分析し、上昇期待度をスコアリングして上位銘柄をレコメンドします。
+
+使用するテクニカル指標:
+
+- **移動平均線 (SMA20 / SMA50 / SMA200)**: 各線の並びから上昇トレンドを判定
+- **ゴールデンクロス**: 短期SMAが中期SMAを上抜けた直近シグナルを検出
+- **RSI (14日)**: 売られすぎからの反発・健全な水準を加点、過熱は減点
+- **モメンタム**: 直近20日・60日のリターン
+- **ボリンジャーバンド**: バンド内位置で過熱感を判定
+- **出来高トレンド**: 直近5日平均と20日平均の比較
+
+ノートブックのセクション7にある `candidate_tickers` に分析したい銘柄を追加するだけで、ランキングがCSVで出力されます。
+
+> ⚠️ **免責事項**: 本機能は過去データに基づくテクニカル分析の自動化であり、将来の株価上昇を保証するものではありません。投資判断は自己責任で行ってください。
 
 ### 使い方
 
@@ -74,6 +92,22 @@ This is a stock price data fetching tool that runs on Google Colab. Using the yf
 - ⏱️ **Flexible Intervals**: Support for daily, weekly, monthly, and other time intervals
 - 💾 **CSV Download**: Save and download retrieved data as CSV files
 - 🇯🇵 **Japanese Support**: Option to output CSV with Japanese column names
+- 📈 **Bullish Stock Recommender**: Scores candidate tickers by technical indicators from historical price data and ranks the ones with strong bullish signals
+
+### Recommender (Section 7)
+
+Analyzes multiple candidate tickers at once and ranks them by a composite bullishness score based on:
+
+- **Moving Averages (SMA20 / SMA50 / SMA200)** — uptrend alignment
+- **Golden Cross** — recent short-term SMA crossing above mid-term SMA
+- **RSI (14)** — rewards healthy / oversold-rebound zones, penalizes overbought
+- **Momentum** — 20-day and 60-day returns
+- **Bollinger Bands** — position within the band
+- **Volume trend** — recent 5-day vs 20-day average volume
+
+Edit the `candidate_tickers` dict in section 7 and run the cells; the ranking is exported to CSV.
+
+> ⚠️ **Disclaimer**: This is automated technical analysis on historical data and does not guarantee future price increases. Make investment decisions at your own risk.
 
 ### How to Use
 
