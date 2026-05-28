@@ -16,13 +16,15 @@
 - 💾 **CSVダウンロード**: 取得したデータをCSVファイルとして保存・ダウンロード
 - 🇯🇵 **日本語対応**: カラム名を日本語に変換したバージョンも出力可能
 - 📈 **上昇予想銘柄のレコメンド**: 過去の株価推移からテクニカル指標でスコアリングし、上昇期待度が高い銘柄をランキング表示
+- 🤖 **AI予測モデル**: 上位銘柄に対し LSTM / Stacked LSTM / GRU の3モデルを訓練し、MAPE最小のモデルで将来株価を予測
 
 ### レコメンド機能（セクション7）
 
-複数の候補銘柄の過去株価推移を一括分析し、上昇期待度をスコアリングして上位銘柄をレコメンドします。
+日経225・TOPIX Core30・S&P500・NASDAQ100 の構成銘柄を自動取得し、約1000銘柄を2段階スクリーニングで上昇期待度ランキング化します。
 
-使用するテクニカル指標:
+**Stage 1（事前スクリーニング）**: 全銘柄の3ヶ月データを一括取得し、20日リターン・出来高比で上位200銘柄に絞り込み
 
+**Stage 2（深層テクニカル分析）**: 以下のテクニカル指標でスコアリング
 - **移動平均線 (SMA20 / SMA50 / SMA200)**: 各線の並びから上昇トレンドを判定
 - **ゴールデンクロス**: 短期SMAが中期SMAを上抜けた直近シグナルを検出
 - **RSI (14日)**: 売られすぎからの反発・健全な水準を加点、過熱は減点
@@ -30,9 +32,24 @@
 - **ボリンジャーバンド**: バンド内位置で過熱感を判定
 - **出来高トレンド**: 直近5日平均と20日平均の比較
 
-ノートブックのセクション7にある `candidate_tickers` に分析したい銘柄を追加するだけで、ランキングがCSVで出力されます。
+セクション7冒頭の `use_nikkei225` / `use_topix_core30` / `use_sp500` / `use_nasdaq100` フラグで対象指数を選択できます。
 
-> ⚠️ **免責事項**: 本機能は過去データに基づくテクニカル分析の自動化であり、将来の株価上昇を保証するものではありません。投資判断は自己責任で行ってください。
+### AI予測モデルによる将来予測（セクション8）
+
+Stage 2 上位銘柄に対し、**3種類のニューラルネットワークから最適モデルを自動選択**して将来N日先の株価を予測します。
+
+| モデル | 構造 | 特徴 |
+|---|---|---|
+| **LSTM-Simple** | LSTM(32) + Dense(1) | 軽量・高速 |
+| **LSTM-Stacked** | LSTM(50) × 3 + Dropout + Dense(1) | 表現力高め |
+| **GRU** | GRU(50) × 2 + Dropout + Dense(1) | LSTM の軽量代替 |
+
+各銘柄について3モデルを訓練し、**バリデーション MAPE が最小のモデル**で `NN_FORECAST_DAYS` 日先まで反復予測します。出力は以下のチャートとCSV:
+- 銘柄ごとの「実績 / テスト予測 / 将来予測」チャート (`ai_forecast.png`)
+- モデル別精度比較バーチャート (`ai_model_comparison.png`)
+- AI予測込み拡張ランキング CSV (`recommend_with_ai_YYYYMMDD.csv`)
+
+> ⚠️ **免責事項**: 本機能は過去データに基づくテクニカル分析および機械学習による予測の自動化であり、将来の株価を保証するものではありません。投資判断は自己責任で行ってください。
 
 ### 使い方
 
@@ -92,11 +109,14 @@ This is a stock price data fetching tool that runs on Google Colab. Using the yf
 - ⏱️ **Flexible Intervals**: Support for daily, weekly, monthly, and other time intervals
 - 💾 **CSV Download**: Save and download retrieved data as CSV files
 - 🇯🇵 **Japanese Support**: Option to output CSV with Japanese column names
-- 📈 **Bullish Stock Recommender**: Scores candidate tickers by technical indicators from historical price data and ranks the ones with strong bullish signals
+- 📈 **Bullish Stock Recommender**: Auto-fetches Nikkei 225 / TOPIX Core30 / S&P 500 / NASDAQ-100 constituents (~1000 stocks) and ranks them via 2-stage screening
+- 🤖 **AI Forecast**: Trains LSTM / Stacked LSTM / GRU on top stocks, auto-selects the best model by MAPE, and forecasts future prices
 
 ### Recommender (Section 7)
 
-Analyzes multiple candidate tickers at once and ranks them by a composite bullishness score based on:
+**Stage 1 (Pre-screening)**: Bulk-downloads 3-month data for ~1000 tickers and filters by 20-day return + volume ratio to keep the top 200.
+
+**Stage 2 (Deep technical analysis)** scores each candidate using:
 
 - **Moving Averages (SMA20 / SMA50 / SMA200)** — uptrend alignment
 - **Golden Cross** — recent short-term SMA crossing above mid-term SMA
@@ -105,9 +125,21 @@ Analyzes multiple candidate tickers at once and ranks them by a composite bullis
 - **Bollinger Bands** — position within the band
 - **Volume trend** — recent 5-day vs 20-day average volume
 
-Edit the `candidate_tickers` dict in section 7 and run the cells; the ranking is exported to CSV.
+Toggle indices via `use_nikkei225` / `use_topix_core30` / `use_sp500` / `use_nasdaq100` at the top of section 7.
 
-> ⚠️ **Disclaimer**: This is automated technical analysis on historical data and does not guarantee future price increases. Make investment decisions at your own risk.
+### AI Forecast (Section 8)
+
+For the top-K recommendations from Stage 2, three neural networks are trained and the **best model (lowest validation MAPE)** is auto-selected to forecast N days ahead:
+
+| Model | Architecture |
+|---|---|
+| **LSTM-Simple** | LSTM(32) + Dense(1) |
+| **LSTM-Stacked** | LSTM(50) × 3 + Dropout + Dense(1) |
+| **GRU** | GRU(50) × 2 + Dropout + Dense(1) |
+
+Outputs: per-stock forecast chart (`ai_forecast.png`), model-comparison bar chart (`ai_model_comparison.png`), and augmented ranking CSV (`recommend_with_ai_YYYYMMDD.csv`).
+
+> ⚠️ **Disclaimer**: This is automated technical analysis and ML-based forecasting on historical data — it does not guarantee future price movements. Make investment decisions at your own risk.
 
 ### How to Use
 
